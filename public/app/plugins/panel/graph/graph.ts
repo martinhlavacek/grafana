@@ -230,7 +230,52 @@ class GraphElement {
     };
   };
 
+  covertFacetId = (value: string): string => {
+    if (value) {
+      const facetId = value.split(' > ');
+      if (facetId.length === 2) {
+        const facetId1 = facetId[0];
+        const facetId2 = facetId[1];
+        const result = `${facetId1}\"/\"${facetId2}`;
+        return result;
+      }
+    }
+    return '';
+  };
+
+  goToEmma(item: any) {
+    const datasource = this.ctrl.datasource as any;
+    const url = datasource.jsonData.appUrl;
+    const range = this.ctrl.range;
+
+    if (this.panel && this.panel.targets && this.panel.targets.length > 0) {
+      const target = this.panel.targets[0];
+      const collectionId = target.collectionId;
+      const bookmarkId = target.bookmarkId;
+      const targetId = this.covertFacetId(target.facetIdLabel);
+      const facetNamespace = target.facetNamespace;
+      const urlLinkStatic = `${url}/cs/loader/bookmarks/query`;
+      let urlLinkFinal = `${urlLinkStatic}/${collectionId}/${bookmarkId}/reporting`;
+      if (targetId) {
+        const urlLinkFacetNameNamespace = `${urlLinkFinal}?facetName=${targetId}&facetNamespace=${facetNamespace}`;
+        urlLinkFinal = `${urlLinkFacetNameNamespace}&facetValue=${item.series.alias}`;
+        urlLinkFinal = `${urlLinkFinal}&from=${range.from.format()}&to=${range.to.format()}`;
+      } else {
+        urlLinkFinal = `${urlLinkFinal}?from=${range.from.format()}&to=${range.to.format()}`;
+      }
+      window.open(urlLinkFinal, '_blank');
+    }
+  }
+
+  isEmmaDatasource = (): boolean => {
+    const datasource = this.ctrl.datasource as any;
+    return datasource && datasource.jsonData && !!datasource.jsonData.appUrl;
+  };
+
   onPlotClick(event: JQueryEventObject, pos: any, item: any) {
+    if (this.isEmmaDatasource()) {
+      this.goToEmma(item);
+    }
     const scrollContextElement = this.elem.closest('.view') ? this.elem.closest('.view').get()[0] : null;
     const contextMenuSourceItem = item;
 
@@ -287,13 +332,22 @@ class GraphElement {
           : undefined;
       }
 
-      this.scope.$apply(() => {
-        // Setting nearest CustomScrollbar element as a scroll context for graph context menu
-        this.contextMenu.setScrollContextElement(scrollContextElement);
-        this.contextMenu.setSource(contextMenuSourceItem);
-        this.contextMenu.setMenuItemsSupplier(this.getContextMenuItemsSupplier(pos, linksSupplier) as any);
-        this.contextMenu.toggleMenu(pos);
-      });
+      if (this.isEmmaDatasource()) {
+        this.scope.$apply(() => {
+          // Setting nearest CustomScrollbar element as a scroll context for graph context menu
+          this.contextMenu.setScrollContextElement(scrollContextElement);
+          this.contextMenu.setSource(contextMenuSourceItem);
+          this.contextMenu.setMenuItemsSupplier(this.getContextMenuItemsSupplier(pos, linksSupplier) as any);
+        });
+      } else {
+        this.scope.$apply(() => {
+          // Setting nearest CustomScrollbar element as a scroll context for graph context menu
+          this.contextMenu.setScrollContextElement(scrollContextElement);
+          this.contextMenu.setSource(contextMenuSourceItem);
+          this.contextMenu.setMenuItemsSupplier(this.getContextMenuItemsSupplier(pos, linksSupplier) as any);
+          this.contextMenu.toggleMenu(pos);
+        });
+      }
     }
   }
 
